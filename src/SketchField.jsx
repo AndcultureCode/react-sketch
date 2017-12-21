@@ -512,7 +512,7 @@ class SketchField extends Component {
             img.onload = () => {
                 const sizeX = img.width <= img.height ? "auto" : "100%";
                 const sizeY = img.width > img.height ? "auto" : "100%";
-                this._canvas.style.background = `url(${dataUrl})`;
+                this._canvas.style.background = `url('${dataUrl}')`;
                 this._canvas.style.backgroundSize = `${sizeX} ${sizeY}`;
                 this._canvas.style.backgroundRepeat = "no-repeat";
                 this._canvas.style.backgroundPosition = "center";
