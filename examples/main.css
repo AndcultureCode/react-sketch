@@ -19,6 +19,13 @@ body, html {
     color: #000000;
 }
 
+#canvas-container {
+    overflow: hidden;
+    max-height: 512px;
+    max-width: 529px;
+    padding-right: 0px;
+}
+
 .canvas-area {
     margin: 7px 0 0 7px;
     border: 1px solid #0d3349;

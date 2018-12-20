@@ -12,6 +12,7 @@ import Line from './line';
 import Rectangle from './rectangle';
 import Circle from './circle';
 import Pan from './pan';
+import PanViewport from './panViewport';
 import Tool from './tools';
 
 const fabric = require('fabric').fabric;
@@ -44,7 +45,9 @@ class SketchField extends Component {
         // Specify some width correction which will be applied on auto resize
         widthCorrection: PropTypes.number,
         // Specify some height correction which will be applied on auto resize
-        heightCorrection: PropTypes.number
+        heightCorrection: PropTypes.number,
+        // Specify the max width and height the canvas, butthe canvas will still resize -- this will also prohibit object and background image scaling.
+        fixCanvasToSize: PropTypes.object
     };
 
     static defaultProps = {
@@ -136,6 +139,11 @@ class SketchField extends Component {
         canvas.on('object:scaling', this._onObjectScaling);
         canvas.on('object:rotating', this._onObjectRotating);
 
+        if (this.props.fixCanvasToSize) {
+            canvas.setWidth(this.props.fixCanvasToSize.width);
+            canvas.setHeight(this.props.fixCanvasToSize.height);
+        }
+
         this.disableTouchScroll();
         this._resize();
 
@@ -158,6 +166,7 @@ class SketchField extends Component {
         this._tools[Tool.Rectangle] = new Rectangle(fabricCanvas);
         this._tools[Tool.Circle] = new Circle(fabricCanvas);
         this._tools[Tool.Pan] = new Pan(fabricCanvas);
+        this._tools[Tool.PanViewport] = new PanViewport(fabricCanvas, this.props.fixCanvasToSize ? {minX: 0, maxX: this.props.fixCanvasToSize.width, minY: 0, maxY: this.props.fixCanvasToSize.height} : null);
     }
 
     componentWillUnmount() {
@@ -170,6 +179,10 @@ class SketchField extends Component {
             || this.props.height !== prevProps.height) {
 
             this._resize();
+        }
+
+        if (this.props.fixCanvasToSize != prevProps.fixCanvasToSize) {
+            this._initTools(this._fc);
         }
     }
 
@@ -284,35 +297,74 @@ class SketchField extends Component {
         let {widthCorrection, heightCorrection} = this.props;
         let canvas = this._fc;
         let domNode = ReactDOM.findDOMNode(this);
-        let {offsetWidth, clientHeight} = domNode;
+        let {offsetWidth, clientHeight, clientWidth} = domNode;
         let prevWidth = canvas.getWidth();
         let prevHeight = canvas.getHeight();
         let wfactor = ((offsetWidth - widthCorrection) / prevWidth).toFixed(2);
         let hfactor = ((clientHeight - heightCorrection) / prevHeight).toFixed(2);
-        canvas.setWidth(offsetWidth - widthCorrection);
-        canvas.setHeight(clientHeight - heightCorrection);
-        if (canvas.backgroundImage) {
-            // Need to scale background images as well
-            let bi = canvas.backgroundImage;
-            bi.width = bi.width * wfactor;
-            bi.height = bi.height * hfactor;
-        }
-        let objects = canvas.getObjects();
-        for (let i in objects) {
-            let obj = objects[i];
-            let scaleX = obj.scaleX;
-            let scaleY = obj.scaleY;
-            let left = obj.left;
-            let top = obj.top;
-            let tempScaleX = scaleX * wfactor;
-            let tempScaleY = scaleY * hfactor;
-            let tempLeft = left * wfactor;
-            let tempTop = top * hfactor;
-            obj.scaleX = tempScaleX;
-            obj.scaleY = tempScaleY;
-            obj.left = tempLeft;
-            obj.top = tempTop;
-            obj.setCoords();
+
+        // Resize the canvas if we have a max canvas width
+        if (this.props.fixCanvasToSize) {
+            if (clientWidth <= this.props.fixCanvasToSize.width) {
+                canvas.setWidth(clientWidth);
+            } else if (canvas.getWidth() < this.props.fixCanvasToSize.width) {
+                canvas.setWidth(this.props.fixCanvasToSize.width);
+            }
+
+            if (clientHeight <= this.props.fixCanvasToSize.height) {
+                canvas.setHeight(clientHeight);
+            } else if (canvas.getHeight() < this.props.fixCanvasToSize.height) {
+                canvas.setHeight(this.props.fixCanvasToSize.height);
+            }
+
+            let xTransform = canvas.viewportTransform[4] + canvas.getWidth() - prevWidth;
+            let yTransform = canvas.viewportTransform[5] + canvas.getHeight() - prevHeight;
+
+            const minX = (this.props.fixCanvasToSize.width - canvas.getWidth()) * -1;
+            const minY = (this.props.fixCanvasToSize.height - canvas.getHeight()) * -1;
+
+            if (this.props.fixCanvasToSize.width && xTransform <= minX) {
+                xTransform = minX;
+            } else if (this.props.fixCanvasToSize.width && xTransform > 0) {
+                xTransform = 0;
+            }
+
+            if (this.props.fixCanvasToSize.height && yTransform <= minY) {
+                yTransform = minY;
+            } else if (this.props.fixCanvasToSize.height && yTransform > 0) {
+                yTransform = 0;
+            }
+
+            // Transform the viewport so the same section of the canvas is in view.
+            canvas.viewportTransform[4] = xTransform;
+            canvas.viewportTransform[5] = yTransform;
+        } else {
+            canvas.setWidth(offsetWidth - widthCorrection);
+            canvas.setHeight(clientHeight - heightCorrection);
+            
+            if (canvas.backgroundImage) {
+                // Need to scale background images as well
+                let bi = canvas.backgroundImage;
+                bi.width = bi.width * wfactor;
+                bi.height = bi.height * hfactor;
+            }
+            let objects = canvas.getObjects();
+            for (let i in objects) {
+                let obj = objects[i];
+                let scaleX = obj.scaleX;
+                let scaleY = obj.scaleY;
+                let left = obj.left;
+                let top = obj.top;
+                let tempScaleX = scaleX * wfactor;
+                let tempScaleY = scaleY * hfactor;
+                let tempLeft = left * wfactor;
+                let tempTop = top * hfactor;
+                obj.scaleX = tempScaleX;
+                obj.scaleY = tempScaleY;
+                obj.left = tempLeft;
+                obj.top = tempTop;
+                obj.setCoords();
+            }
         }
         this.setState({
             parentWidth: offsetWidth
@@ -479,9 +531,13 @@ class SketchField extends Component {
      * @param propertiesToInclude Array <optional> Any properties that you might want to additionally include in the output
      * @returns {string} JSON string of the canvas just cleared
      */
-    clear(propertiesToInclude) {
+    clear(propertiesToInclude, removeOnlyObjects = false) {
         let discarded = this.toJSON(propertiesToInclude);
-        this._fc.clear();
+        if (removeOnlyObjects) {
+            this._fc.remove(...this._fc.getObjects());
+        } else {
+            this._fc.clear();
+        }
         this._history.clear();
         return discarded;
     }
@@ -509,14 +565,22 @@ class SketchField extends Component {
         }
         if (options.centerContained) {
             let img = new Image();
-            img.onload = () => {
-                const sizeX = img.width <= img.height ? "auto" : "100%";
-                const sizeY = img.width > img.height ? "auto" : "100%";
-                this._canvas.style.background = `url('${dataUrl}')`;
-                this._canvas.style.backgroundSize = `${sizeX} ${sizeY}`;
-                this._canvas.style.backgroundRepeat = "no-repeat";
-                this._canvas.style.backgroundPosition = "center";
-            };
+            img.onload = () => canvas.setBackgroundImage(new fabric.Image(img), (img) => {
+                const scaleX = (this.props.fixCanvasToSize ? this.props.fixCanvasToSize.width : canvas.width) / img.width ;
+                const scaleY = (this.props.fixCanvasToSize ? this.props.fixCanvasToSize.height : canvas.height) / img.height;
+
+                const min = Math.min(scaleX, scaleY);
+
+                img.originX = 'center';
+                img.originY = 'center';
+
+                img.width = img.width * min;
+                img.height = img.height * min;
+                img.top = (this.props.fixCanvasToSize ? this.props.fixCanvasToSize.height : canvas.height) / 2;
+                img.left =(this.props.fixCanvasToSize ? this.props.fixCanvasToSize.width : canvas.width) / 2;
+
+                canvas.renderAll()
+            }, options);
             img.src = dataUrl;
         }
         else {
@@ -534,10 +598,14 @@ class SketchField extends Component {
             onChange,
             width,
             height,
+            fixCanvasToSize,
             ...other
         } = this.props;
 
-        let canvasDivStyle = Object.assign({}, style ? style : {}, width ? {width: width} : {}, height ? {height: height} : {height: 512});
+        const divWidth = width ? {width: width} : {};
+        const divHeight = height ? {height: height} : (fixCanvasToSize ? {} : {height: 502})
+
+        let canvasDivStyle = Object.assign({}, style ? style : {}, divWidth, divHeight );
 
         return (
             <div

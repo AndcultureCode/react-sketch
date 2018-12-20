@@ -139,7 +139,8 @@ class SketchFieldDemo extends React.Component {
         stretchedY: false,
         centerContained: false,
         originX: 'left',
-        originY: 'top'
+        originY: 'top',
+        fixCanvasToSize: false
     };
 
     componentDidMount() {
@@ -267,7 +268,7 @@ class SketchFieldDemo extends React.Component {
                 stretchedY: stretchedY,
                 originX: originX,
                 originY: originY,
-                centerContained: centerContained,
+                centerContained: centerContained
             }), false);
             reader.readAsDataURL(accepted[0]);
         }
@@ -320,7 +321,7 @@ class SketchFieldDemo extends React.Component {
                     {/*Sketch Area with tools*/}
 
                     <div className='row'>
-                        <div className='col-xs-7 col-sm-7 col-md-9 col-lg-9'>
+                        <div className='col-xs-7 col-sm-7 col-md-9 col-lg-9' id={this.state.useFixedCanvasSize ? 'canvas-container' : ''}>
 
                             {/* Sketch area */}
                             <SketchField
@@ -332,6 +333,7 @@ class SketchFieldDemo extends React.Component {
                                 fillColor={this.state.fillWithColor ? this.state.fillColor : 'transparent'}
                                 backgroundColor={this.state.fillWithBackgroundColor ? this.state.backgroundColor : 'transparent'}
                                 width={this.state.controlledSize ? this.state.sketchWidth : null}
+                                fixCanvasToSize={this.state.useFixedCanvasSize ? {width: 512, height: 502} : null}
                                 height={this.state.controlledSize ? this.state.sketchHeight : null}
                                 defaultData={dataJson}
                                 defaultDataType="json"
@@ -351,6 +353,7 @@ class SketchFieldDemo extends React.Component {
                                         <MenuItem value={Tools.Rectangle} primaryText="Rectangle"/>
                                         <MenuItem value={Tools.Circle} primaryText="Circle"/>
                                         <MenuItem value={Tools.Pan} primaryText="Pan"/>
+                                        <MenuItem value={Tools.PanViewport} primaryText="PanViewport"/>
                                     </SelectField>
                                     <br/>
                                     <br/>
@@ -390,6 +393,9 @@ class SketchFieldDemo extends React.Component {
                                                 defaultValue={this.state.sketchHeight}
                                                 onChange={(e, v) => this.setState({sketchHeight: v})}/>
                                         <br/>
+                                        <Toggle label="Fix Canvas Size (use Viewport)"
+                                                defaultToggled={this.state.useFixedCanvasSize}
+                                                onToggle={(e) => this.setState({useFixedCanvasSize: !this.state.useFixedCanvasSize})} />
                                     </div>
                                 </CardText>
                             </Card>
