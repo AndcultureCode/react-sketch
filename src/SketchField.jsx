@@ -334,10 +334,6 @@ class SketchField extends Component {
             } else if (this.props.fixCanvasToSize.height && yTransform > 0) {
                 yTransform = 0;
             }
-
-            // Transform the viewport so the same section of the canvas is in view.
-            canvas.viewportTransform[4] = xTransform;
-            canvas.viewportTransform[5] = yTransform;
         } else {
             canvas.setWidth(offsetWidth - widthCorrection);
             canvas.setHeight(clientHeight - heightCorrection);
