@@ -316,24 +316,6 @@ class SketchField extends Component {
             } else if (canvas.getHeight() < this.props.fixCanvasToSize.height) {
                 canvas.setHeight(this.props.fixCanvasToSize.height);
             }
-
-            let xTransform = canvas.viewportTransform[4] + canvas.getWidth() - prevWidth;
-            let yTransform = canvas.viewportTransform[5] + canvas.getHeight() - prevHeight;
-
-            const minX = (this.props.fixCanvasToSize.width - canvas.getWidth()) * -1;
-            const minY = (this.props.fixCanvasToSize.height - canvas.getHeight()) * -1;
-
-            if (this.props.fixCanvasToSize.width && xTransform <= minX) {
-                xTransform = minX;
-            } else if (this.props.fixCanvasToSize.width && xTransform > 0) {
-                xTransform = 0;
-            }
-
-            if (this.props.fixCanvasToSize.height && yTransform <= minY) {
-                yTransform = minY;
-            } else if (this.props.fixCanvasToSize.height && yTransform > 0) {
-                yTransform = 0;
-            }
         } else {
             canvas.setWidth(offsetWidth - widthCorrection);
             canvas.setHeight(clientHeight - heightCorrection);
