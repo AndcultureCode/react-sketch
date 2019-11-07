@@ -2,6 +2,7 @@ declare module 'react-sketch' {
 	import * as React from 'react'
 
 	export class SketchField extends React.PureComponent<{
+		name?: string
 		// the color of the line
 		lineColor?: string
 		// The width of the line
@@ -38,7 +39,9 @@ declare module 'react-sketch' {
 		// Class name to pass to container div of canvas
 		className?: string
 		// Style options to pass to container div of canvas
-		style?: {}
+		style?: {},
+		// Specify the max width and height the canvas, butthe canvas will still resize -- this will also prohibit object and background image scaling.
+		fixCanvasToSize?: {width: number, height: number}
 	}> {
 
 		/**
