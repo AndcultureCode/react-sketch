@@ -1,5 +1,6 @@
 /*eslint no-unused-vars: 0*/
 
+import ReactDOM from 'react-dom';
 import React, {PureComponent} from 'react';
 import PropTypes from 'prop-types';
 import History from './history';
@@ -261,7 +262,8 @@ class SketchField extends PureComponent {
     if (e) e.preventDefault();
     let { widthCorrection, heightCorrection } = this.props;
     let canvas = this._fc;
-    let { offsetWidth, clientHeight, clientWidth } = this._container;
+    let domNode = ReactDOM.findDOMNode(this);
+    let {offsetWidth, clientHeight, clientWidth} = domNode;
     let prevWidth = canvas.getWidth();
     let prevHeight = canvas.getHeight();
     let wfactor = ((offsetWidth - widthCorrection) / prevWidth).toFixed(2);

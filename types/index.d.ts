@@ -1,6 +1,17 @@
 declare module 'react-sketch' {
 	import * as React from 'react'
 
+	export const Tools = {
+		Circle: 'circle',
+		Line: 'line',
+		Arrow: 'arrow',
+		Pencil: 'pencil',
+		Rectangle: 'rectangle',
+		Select: 'select',
+		Pan: 'pan',
+		PanViewport: 'panViewport'
+	}
+
 	export class SketchField extends React.PureComponent<{
 		name?: string
 		// the color of the line
