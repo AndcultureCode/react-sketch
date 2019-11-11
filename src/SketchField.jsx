@@ -1,6 +1,5 @@
 /*eslint no-unused-vars: 0*/
 
-import ReactDOM from 'react-dom';
 import React, {PureComponent} from 'react';
 import PropTypes from 'prop-types';
 import History from './history';
@@ -262,8 +261,7 @@ class SketchField extends PureComponent {
     if (e) e.preventDefault();
     let { widthCorrection, heightCorrection } = this.props;
     let canvas = this._fc;
-    let domNode = ReactDOM.findDOMNode(this);
-    let {offsetWidth, clientHeight, clientWidth} = domNode;
+    let { offsetWidth, clientHeight, clientWidth } = this._container;
     let prevWidth = canvas.getWidth();
     let prevHeight = canvas.getHeight();
     let wfactor = ((offsetWidth - widthCorrection) / prevWidth).toFixed(2);
@@ -282,6 +280,28 @@ class SketchField extends PureComponent {
         } else if (canvas.getHeight() < this.props.fixCanvasToSize.height) {
             canvas.setHeight(this.props.fixCanvasToSize.height);
         }
+
+        let xTransform = canvas.viewportTransform[4] + canvas.getWidth() - prevWidth;
+        let yTransform = canvas.viewportTransform[5] + canvas.getHeight() - prevHeight;
+
+        const minX = (this.props.fixCanvasToSize.width - canvas.getWidth()) * -1;
+        const minY = (this.props.fixCanvasToSize.height - canvas.getHeight()) * -1;
+
+        if (this.props.fixCanvasToSize.width && xTransform <= minX) {
+            xTransform = minX;
+        } else if (this.props.fixCanvasToSize.width && xTransform > 0) {
+            xTransform = 0;
+        }
+
+        if (this.props.fixCanvasToSize.height && yTransform <= minY) {
+            yTransform = minY;
+        } else if (this.props.fixCanvasToSize.height && yTransform > 0) {
+            yTransform = 0;
+        }
+
+        // Transform the viewport so the same section of the canvas is in view.
+        canvas.viewportTransform[4] = xTransform;
+        canvas.viewportTransform[5] = yTransform;
     } else {
         canvas.setWidth(offsetWidth - widthCorrection);
         canvas.setHeight(clientHeight - heightCorrection);
@@ -684,11 +704,13 @@ class SketchField extends PureComponent {
   componentWillUnmount = () => window.removeEventListener('resize', this._resize);
 
   componentDidUpdate = (prevProps, prevState) => {
-    if (this.state.parentWidth !== prevState.parentWidth
-      || this.props.width !== prevProps.width
+    if (this.props.width !== prevProps.width
       || this.props.height !== prevProps.height) {
-
       this._resize()
+    }
+
+    if (this.state.parentWidth !== prevState.parentWidth) {
+      window.setTimeout(this._resize, 0);
     }
 
     if (this.props.tool !== prevProps.tool) {
