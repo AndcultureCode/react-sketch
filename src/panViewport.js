@@ -41,16 +41,19 @@ class PanViewport extends FabricCanvasTool {
         const minX = (this.panBounds.maxX - canvas.getWidth()) * -1;
         const minY = (this.panBounds.maxY - canvas.getHeight()) * -1;
 
-        if (canvas.viewportTransform[4] + moveToX <= minX || canvas.viewportTransform[4] + moveToX >= 0) {
-            moveToX = 0;
+        if (canvas.viewportTransform.length >= 6) {
+            if (canvas.viewportTransform[4] + moveToX <= minX || canvas.viewportTransform[4] + moveToX >= 0) {
+                moveToX = 0;
+            }
+
+            if (canvas.viewportTransform[5] + moveToY <= minY || canvas.viewportTransform[5] + moveToY >= 0) {
+                moveToY = 0;
+            }
+
+            canvas.viewportTransform[4] += moveToX;
+            canvas.viewportTransform[5] += moveToY;
         }
 
-        if (canvas.viewportTransform[5] + moveToY <= minY || canvas.viewportTransform[5] + moveToY >= 0) {
-            moveToY = 0;
-        }
-
-        canvas.viewportTransform[4] += moveToX;
-        canvas.viewportTransform[5] += moveToY;
         canvas.renderAll();
     }
 
